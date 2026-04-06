@@ -245,3 +245,5 @@ function Get-CDMyTransactions{
 
     Invoke-CDRPC -endpoint "vault/transactions/?start_index=$start_index&end_index=$end_index" -json $json 
 }
+
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault
