@@ -1,6 +1,12 @@
 # CircuitSage
 Interact with CircuitDao through Powershell and Sage RPC
 
+### Installation
+Open PowerShell
+```PowerShell
+Install-Module -name CircuitSage
+```
+
 ### Description
 This module is a PowerShell wrapper that interacts with [Circuit Dao](https://circuitdao.com) through the [Sage Wallet](https://github.com/xch-dev/sage). This module lets you view vaults and interact with your vaults.
 
