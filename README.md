@@ -1,165 +1,301 @@
 # CircuitSage
-Interact with CircuitDao through Powershell and Sage RPC
 
-### Installation
-Open PowerShell
-```PowerShell
-Install-Module -name CircuitSage
+A PowerShell module for interacting with [CircuitDao](https://circuitdao.com) through the [Sage Wallet](https://github.com/xch-dev/sage) RPC API. Manage lending vaults, borrow/lend CAT tokens, and participate in liquidation auctions — all from the comfort of your PowerShell terminal.
+
+## Table of Contents
+
+- [CircuitSage](#circuitsage)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+  - [Vault Management](#vault-management)
+    - [Check Your Vault](#check-your-vault)
+    - [View a Specific Vault](#view-a-specific-vault)
+    - [Monitor Vault Health](#monitor-vault-health)
+  - [Vault Operations](#vault-operations)
+    - [Deposit Collateral](#deposit-collateral)
+    - [Borrow CAT Tokens](#borrow-cat-tokens)
+    - [Repay Debt](#repay-debt)
+    - [Withdraw Collateral](#withdraw-collateral)
+  - [Surplus Auctions](#surplus-auctions)
+    - [View Active Surplus Auctions](#view-active-surplus-auctions)
+    - [Settle Surplus](#settle-surplus)
+    - [Bid on Surplus Auctions](#bid-on-surplus-auctions)
+  - [Vault Bidding](#vault-bidding)
+  - [Command Reference](#command-reference)
+    - [Query Commands](#query-commands)
+    - [Action Commands](#action-commands)
+  - [Notes](#notes)
+
+---
+
+## Prerequisites
+
+- **PowerShell 7.4+** — [Download](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+- **Sage Wallet** — [Download](https://github.com/xch-dev/sage/releases) (must be running and logged in)
+- **Required PowerShell Modules:**
+  - `PowerSage` — Sage Wallet RPC integration
+  - `PwshSpectreConsole` — Terminal UI components
+
+Install the prerequisites:
+
+```powershell
+Install-Module -Name PowerSage, PwshSpectreConsole -Scope CurrentUser
 ```
 
-### Description
-This module is a PowerShell wrapper that interacts with [Circuit Dao](https://circuitdao.com) through the [Sage Wallet](https://github.com/xch-dev/sage). This module lets you view vaults and interact with your vaults.
+## Installation
 
-Governance actions will be added later.
+Install CircuitSage from the PowerShell Gallery:
 
-### Get Your Lending Vault
-View your vault for the current logged in Sage Wallet.
-```PowerShell
+```powershell
+Install-Module -Name CircuitSage -Scope CurrentUser
+```
+
+Import the module:
+
+```powershell
+Import-Module CircuitSage
+```
+
+> **Tip:** Add `Import-Module CircuitSage` to your `$PROFILE` to load it automatically each session.
+
+---
+
+## Quick Start
+
+```powershell
+# Check your vault status
 Get-CDMyVault
 
+# See vaults nearing liquidation
+Get-CDVaults -status NearingLiquidation
 
+# Deposit 10 XCH into your vault
+Invoke-CDVaultAction -operation deposit -amount (10 | ConvertTo-XchMojo) -submit
+
+# Borrow 500 BYC
+Invoke-CDVaultAction -operation borrow -amount 500000 -submit
+```
+
+---
+
+## Vault Management
+
+### Check Your Vault
+
+View details for the vault associated with your current Sage Wallet login:
+
+```powershell
+Get-CDMyVault
+```
+
+**Sample output:**
+
+```
 name                        : f51972063332446ede1f44167b88708021c5090801586f7d2edeb1834bad80
 inner_puzzle_hash           : 
 synthetic_pk                :                               
 collateral                  : 1715000000000000
 principal                   : 1890984
-stability_fees              : 1284
-stability_fees_to_transfer  : 1283
-debt_owed_to_vault          : 1892268
 debt                        : 1892268
-min_deposit                 : 1
-max_withdraw                : 381629721518987
-max_borrow                  : 541594
-min_repay                   : 1
-max_repay                   : 1892268
-collateral_ratio            : 2.14797798197718
+collateral_ratio            : 2.148
 liquidation_price           : 183
-seized                      : False
 nearing_liquidation         : False
-is_liquidatable             : False
-is_startable                : False
 in_liquidation              : False
-is_biddable                 : False
-is_restartable              : False
-in_bad_debt                 : False
-initiator_incentive_balance :
-auction_ttl                 :
-auction_price               :
 ```
 
-### Interact with Lending Vault
-```PowerShell
-# - NOTE: amount is in mojo (smallest unit of cat or xch)
-# -       to make it easier you can use ( amount | ConvertTo-XchMojo) for XCH
-# -       to make it easier you can use ( amount | ConvertTo-CatMojo) for Cats
+**Key fields:**
 
-# Get the spend bundle needed to deposit 65 XCH
-Invoke-CDVaultAction -operation deposit -amount 65000000000000
+| Field | Description |
+|---|---|
+| `collateral` | Amount of XCH locked as collateral (in mojo) |
+| `principal` | Original borrowed amount |
+| `debt` | Total debt owed (principal + stability fees) |
+| `collateral_ratio` | Current collateralization ratio |
+| `liquidation_price` | Price at which the vault becomes liquidatable |
+| `nearing_liquidation` | Boolean — true if the vault is approaching the liquidation threshold |
 
+### View a Specific Vault
 
-# To Deposit 65 XCH into vault add the [ -submit ] option at the end to request and sign the transaction in one step.
-Invoke-CDVaultAction -operation deposit -amount 65000000000000 -submit
+Look up any vault by its identifier (32-byte hex hash):
 
+```powershell
+# By raw ID
+Get-CDVault -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d"
+
+# By piped input from a vault list
+$vaults = Get-CDVaults -status NearingLiquidation
+Get-CDVault -vault $vaults[0].name
+```
+
+### Monitor Vault Health
+
+```powershell
+# All vaults nearing liquidation
+Get-CDVaults -status NearingLiquidation
+
+# Vaults in active liquidation
+Get-CDVaults -status InLiquidation
+
+# Vaults with bad debt
+Get-CDVaults -status BadDebt
+
+# Full protocol state (all vault collections)
+Get-CDVaults -status Any
+```
+
+---
+
+## Vault Operations
+
+All vault operations accept amounts in **mojo** (the smallest unit of CAT tokens). Use the helper functions to convert human-readable amounts:
+
+| Converter | Example | Result |
+|---|---|---|
+| `ConvertTo-XchMojo` | `(10 \| ConvertTo-XchMojo)` | `10000000000000` |
+| `ConvertTo-CatMojo` | `(200.02 \| ConvertTo-CatMojo)` | `200020` |
+
+### Deposit Collateral
+
+Deposit XCH into your vault as collateral:
+
+```powershell
+# Estimate only (review before committing)
+Invoke-CDVaultAction -operation deposit -amount (65 | ConvertTo-XchMojo)
+
+# Deposit and submit
+Invoke-CDVaultAction -operation deposit -amount (65 | ConvertTo-XchMojo) -submit
+```
+
+### Borrow CAT Tokens
+
+Borrow CAT tokens against your collateral:
+
+```powershell
 # Borrow 200 BYC
 Invoke-CDVaultAction -operation borrow -amount 200000 -submit
+```
 
-# Repay 200.02 BYC 
-# Note: Using the helper function to convert 200.02 to the mojo amount of 200020
-Invoke-CDVaultAction -operation repay -amount ( 200.02 | ConvertTo-CatMojo) -submit
+### Repay Debt
 
-# Withdraw the Deposited XCH (65)
+Repay borrowed CAT tokens (plus any stability fees):
+
+```powershell
+# Repay 200.02 BYC
+Invoke-CDVaultAction -operation repay -amount (200.02 | ConvertTo-CatMojo) -submit
+
+# Repay maximum debt
+Invoke-CDVaultAction -operation repay -amount $vault.max_repay -submit
+```
+
+### Withdraw Collateral
+
+Withdraw XCH collateral from your vault:
+
+```powershell
+# Withdraw 65 XCH
 Invoke-CDVaultAction -operation withdraw -amount (65 | ConvertTo-XchMojo) -submit
+
+# Withdraw maximum available
+Invoke-CDVaultAction -operation withdraw -amount $vault.max_withdraw -submit
 ```
 
-### Get a list of vaults
-There are a few different satatus you can search for.
+---
 
-```PowerShell
-Get-CDVaults -status Any
-Get-CDVaults -status BadDebt
-Get-CDVaults -status InLiquidation
-Get-CDVaults -status NearingLiquidation
-Get-CDVaults -status PendingLiquidation
+## Surplus Auctions
 
+CircuitDao holds surplus coin auctions where excess collateral can be claimed or bid on.
+
+### View Active Surplus Auctions
+
+```powershell
+Get-CDSurplusAuctions
 ```
 
-Example of NearingLiquidation
+### Settle Surplus
 
-```PowerShell
-# Get list of vaults to variable
-$vaults = Get-CDVaults -status NearingLiquidation
+Convert an auctioned coin into a claimable asset:
 
-# Show the list
-$vaults
+```powershell
+# Estimate only
+Invoke-CDSurplusAuctionSettle
 
-collateral           : 500000000000000
-principal            : 603581
-auction_state        : 80
-in_bad_debt          : False
-name                 : 47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d
-discounted_principal : 599166
-inner_puzzle_hash    : 4a0fea393414ecf1ff3a8b5703924c920e6a673c124a562ee6cab0d7614fe6e7
-height               : 8493330
-
-collateral           : 155829972717000
-principal            : 186670
-auction_state        : 80
-in_bad_debt          : False
-name                 : 5b6138c2dfe1f425da66d6af8f69ec75e402cece652e6553ee3a828cd08bd828
-discounted_principal : 185751
-inner_puzzle_hash    : 6d1e8880db3c8266f87625d84b17dbeb0dd83221692314248f1e0cf87bdad2fe
-height               : 8532422
-
-collateral           : 10000000000
-principal            : 0
-auction_state        : 80
-in_bad_debt          : False
-name                 : f8ad85e8eb8315fadca3eec77fbdc4094ffe5476d6a7b7ea61ef6113cdcf63ce
-discounted_principal : 12
-inner_puzzle_hash    : 9d4024cea11000afb95531c7c461c90ace97a2fb7903d506c9dc4665f71abf1c
-height               : 8174600
-
-collateral           : 19000000000000
-principal            : 25000
-auction_state        : 80
-in_bad_debt          : False
-name                 : 640b6ae6ac265f9d71a1d82f0c6d36d21f8ad22d2d4f23a9bbe0a034d9871707
-discounted_principal : 24921
-inner_puzzle_hash    : ac712f473b454a56fe2aca8d180361938b068a5582cdb181ca9b5cb3d0b1342f
-height               : 8290740
+# Submit
+Invoke-CDSurplusAuctionSettle -submit
 ```
 
-### View a specific vault
+### Bid on Surplus Auctions
 
-```PowerShell
-Get-CDVault -vault 47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d
-# Can also use the variable from the vaults list
-# Get-CDVault -vault $vaults[0].name
-name                        : 47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d
-inner_puzzle_hash           : 4a0fea393414ecf1ff3a8b5703924c920e6a673c124a562ee6cab0d7614fe6e7
-synthetic_pk                :
-collateral                  : 500000000000000
-principal                   : 603581
-stability_fees              : 711
-stability_fees_to_transfer  : 711
-debt_owed_to_vault          : 604292
-debt                        : 604292
-min_deposit                 : 1
-max_withdraw                : 74190869198312
-max_borrow                  : 105288
-min_repay                   : 1
-max_repay                   : 604292
-collateral_ratio            : 1.96097250997862
-liquidation_price           : 200
-seized                      : False
-nearing_liquidation         : True
-is_liquidatable             : False
-is_startable                : False
-in_liquidation              : False
-is_biddable                 : False
-is_restartable              : False
-in_bad_debt                 : False
-initiator_incentive_balance :
-auction_ttl                 :
-auction_price               :
+```powershell
+# Estimate only
+Invoke-CDSurplusAuctionBid -bid_amount 100000 -auction_coin "abc123..."
+
+# Submit bid
+Invoke-CDSurplusAuctionBid -bid_amount 100000 -auction_coin "abc123..." -submit
 ```
+
+---
+
+## Vault Bidding
+
+Bid on vaults in liquidation auctions:
+
+```powershell
+# View bid details without submitting
+New-CDVaultBid -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d" `
+    -amount 100000 -max_bid_price 50000 -info
+
+# Place a bid (estimate and submit)
+New-CDVaultBid -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d" `
+    -amount 100000 -max_bid_price 50000 -submit
+```
+
+**Parameters:**
+
+| Parameter | Description |
+|---|---|
+| `vault` | Vault identifier (32-byte hex name) |
+| `amount` | Bid quantity in mojo |
+| `max_bid_price` | Maximum price you're willing to pay in mojo |
+| `info` | Show bid details without submitting |
+
+---
+
+## Command Reference
+
+### Query Commands
+
+| Command | Description |
+|---|---|
+| `Get-CDMyVault` | View your current vault |
+| `Get-CDMySavingsVault` | View your savings vault |
+| `Get-CDMyTransactions` | View vault transaction history |
+| `Get-CDVaults -status <status>` | List vaults by status (Any, NearingLiquidation, PendingLiquidation, InLiquidation, BadDebt) |
+| `Get-CDVault -vault <hash>` | Get details for a specific vault |
+| `Get-CDSurplusAuctions` | List active surplus auctions |
+| `Get-CDProtocolState` | Get full protocol state |
+
+### Action Commands
+
+| Command | Description |
+|---|---|
+| `Invoke-CDVaultAction -operation <op> -amount <n> [-submit]` | Deposit, borrow, repay, or withdraw |
+| `New-CDVaultBid -vault <v> -amount <n> -max_bid_price <n> [-info] [-submit]` | Bid on a liquidating vault |
+| `Start-CDVaultAuction -vault <hash>` | Initiate a vault auction |
+| `Invoke-CDSurplusAuctionBid -auction_coin <c> -bid_amount <n> [-submit]` | Bid on a surplus auction |
+| `Invoke-CDSurplusAuctionSettle [-submit]` | Settle a surplus auction coin |
+
+**Vault operation values:** `deposit`, `borrow`, `repay`, `withdraw`
+
+---
+
+## Notes
+
+- All amounts are in **mojo** unless converted by helper functions.
+  - `1 XCH = 1,000,000,000,000 mojo`
+  - `1 CAT` = depends on token decimal precision
+- The `-submit` flag auto-signs and submits the transaction via your Sage Wallet.
+- Without `-submit`, operations only return the estimated spend bundle for review.
+- The Sage Wallet must be running and logged in for all operations.
+- Use `Get-Help <CommandName>` for detailed help on any command.
