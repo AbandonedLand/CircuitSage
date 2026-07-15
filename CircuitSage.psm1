@@ -1036,4 +1036,4 @@ function Invoke-CDSignCoinSpend{
 # Exported functions
 # ============================================================
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress
