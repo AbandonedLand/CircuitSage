@@ -823,12 +823,12 @@ function Invoke-CDSurplusAuctionBid{
         }
     }
 
-    $response = Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)" -json $json
+    $response = Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)/" -json $json
     if($submit.IsPresent){
         $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
             auto_submit = $true
             partial = $false
-            coin_spends = ($response.bundle.coin_spends)
+            coin_spends = ($response.coin_spends)
         }
         return $spend
     } else {
