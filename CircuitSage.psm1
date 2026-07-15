@@ -101,9 +101,9 @@ function Invoke-CDVaultAction{
     $response = Invoke-CDRPC -endpoint "vault/$operation" -json $json
         if($submit.IsPresent){
             $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{   
-            auto_submit = $true
-            partial = $false
-            coin_spends = ($response.bundle.coin_spends)
+                auto_submit = $true
+                partial = $false
+                coin_spends = ($response.bundle.coin_spends)
             }
             return $spend
         } else {
@@ -226,6 +226,71 @@ function Invoke-CDSignCoinSpend{
 
 
     Invoke-SageRPC -endpoint sign_coin_spends -json $json
+}
+
+function Get-CDSurplusAuctions{
+    Invoke-CDRPC -endpoint "surplus_auctions" -json @{}
+}
+
+function Invoke-CDSurplusAuctionSettle{
+    param(
+        [switch]$submit
+    )
+    
+    $synthetic_pks = Get-CDSyntheticPKs
+    $json = @{
+        synthetic_pks = $synthetic_pks
+        fee_per_cost = 0
+        operation = "settle"
+        args = @{}
+    }
+    
+    $response = Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)" -json $json
+    if($submit.IsPresent){
+        $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{   
+            auto_submit = $true
+            partial = $false
+            coin_spends = ($response.bundle.coin_spends)
+            }
+        return $spend
+    } else {
+        return $response
+    }
+}
+
+function Invoke-CDSurplusAuctionBid{
+    param(
+        [int32]$bid_amount,
+        [string]$auction_coin,
+        [switch]$submit
+    )
+
+    $my_hash = Get-CDMyPuzzleHash
+    $synthetic_pks = Get-CDSyntheticPKs
+
+    $json = @{
+        synthetic_pks = $synthetic_pks
+        fee_per_cost = 0
+        operation = "bid"
+        args = @{
+            amount = $bid_amount
+            target_puzzle_hash = $my_hash
+            info = $false
+        }
+    }
+
+    $response = Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)" -json $json
+    if($submit.IsPresent){
+        $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{   
+            auto_submit = $true
+            partial = $false
+            coin_spends = ($response.bundle.coin_spends)
+            }
+        return $spend
+    } else {
+        return $response
+    }
+
 }
 
 function Get-CDMyTransactions{
