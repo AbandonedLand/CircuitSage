@@ -83,7 +83,12 @@ function Invoke-CDRPC{
 
         $uri = "https://api.circuitdao.com/$endpoint"
         #$uri = "https://testnet-api.circuitdao.com/$endpoint"
-        Invoke-RestMethod -Method Post -Uri $uri -Body $json -ContentType "application/json" -AllowInsecureRedirect
+        try{
+            Invoke-RestMethod -Method Post -Uri $uri -Body $json -ContentType "application/json" -AllowInsecureRedirect
+        } catch {
+            throw "Could not submit request to CircuitDao"
+        }
+        
     }
 }
 
@@ -726,7 +731,8 @@ function Get-CDSurplusAuctions{
 function Invoke-CDSurplusAuctionSettle{
     [CmdletBinding()]
     param(
-        [switch]$submit
+        [switch]$submit,
+        [string]$auction_coin
     )
 
     $synthetic_pks = Get-CDSyntheticPKs
