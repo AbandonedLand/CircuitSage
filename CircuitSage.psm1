@@ -731,8 +731,9 @@ function Get-CDSurplusAuctions{
 function Invoke-CDSurplusAuctionSettle{
     [CmdletBinding()]
     param(
-        [switch]$submit,
-        [string]$auction_coin
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$auction_coin,
+        [switch]$submit
     )
 
     $synthetic_pks = Get-CDSyntheticPKs
@@ -801,7 +802,7 @@ function Invoke-CDSurplusAuctionSettle{
 function Invoke-CDSurplusAuctionBid{
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$false, Position=0)]
+        [Parameter(Mandatory=$true, Position=0)]
         [int32]$bid_amount,
         [Parameter(Mandatory=$true, Position=1)]
         [string]$auction_coin,

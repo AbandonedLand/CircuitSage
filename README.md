@@ -215,15 +215,27 @@ Get-CDSurplusAuctions
 
 ### Settle Surplus
 
-Convert an auctioned coin into a claimable asset:
+Settle (claim) a surplus coin from an active auction, converting the auctioned collateral into a claimable asset.
+
+```
+# First, list active auctions to find the coin identifier
+Get-CDSurplusAuctions
+```
 
 ```powershell
-# Estimate only
-Invoke-CDSurplusAuctionSettle
+# Settle without submitting (estimate only)
+Invoke-CDSurplusAuctionSettle -auction_coin "<coin_id>"
 
-# Submit
-Invoke-CDSurplusAuctionSettle -submit
+# Settle and submit to the network
+Invoke-CDSurplusAuctionSettle -auction_coin "<coin_id>" -submit
 ```
+
+**Parameters:**
+
+| Parameter | Description |
+|---|---|
+| `auction_coin` | The coin identifier of the surplus auction to settle |
+| `submit` | Auto-sign and submit the transaction via Sage Wallet |
 
 ### Bid on Surplus Auctions
 
@@ -283,8 +295,8 @@ New-CDVaultBid -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558
 | `Invoke-CDVaultAction -operation <op> -amount <n> [-submit]` | Deposit, borrow, repay, or withdraw |
 | `New-CDVaultBid -vault <v> -amount <n> -max_bid_price <n> [-info] [-submit]` | Bid on a liquidating vault |
 | `Start-CDVaultAuction -vault <hash>` | Initiate a vault auction |
-| `Invoke-CDSurplusAuctionBid -auction_coin <c> -bid_amount <n> [-submit]` | Bid on a surplus auction |
-| `Invoke-CDSurplusAuctionSettle [-submit]` | Settle a surplus auction coin |
+| `Invoke-CDSurplusAuctionBid -auction_coin <c> -bid_amount <n> [-submit]` | Bid on a surplus auction coin |
+| `Invoke-CDSurplusAuctionSettle -auction_coin <c> [-submit]` | Settle a surplus auction coin |
 
 **Vault operation values:** `deposit`, `borrow`, `repay`, `withdraw`
 
