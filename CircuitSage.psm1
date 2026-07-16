@@ -235,6 +235,38 @@ function Get-CDVaults{
     }
 }
 
+function Invoke-CDStabilityFeeTransfer{
+    param(
+        [Parameter(Mandatory=$true, Position=0)]
+        [string]$vault_name,
+        [int32]$fee_per_cost = 0,
+        [switch]$submit
+    )
+
+    $synthetic_pks = Get-CDSyntheticPKs
+    $json = @{
+        synthetic_pks = $synthetic_pks
+        vault_name = $vault_name
+        fee_per_cost = $fee_per_cost
+    }
+    $response = Invoke-CDRPC -endpoint '/vaults/transfer_stability_fees' -json $json
+    if($submit.IsPresent){
+        $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
+            auto_submit = $true
+            partial = $false
+            coin_spends = ($response.bundle.coin_spends)
+        }
+        return $spend
+    } else {
+        return $response
+    }
+    
+}
+
+function Get-CDAllVaults{
+    Invoke-CDRPC -endpoint '/vaults' -json @{}
+}
+
 <#
 .SYNOPSIS
     Retrieves detailed information about a specific vault.
@@ -749,7 +781,7 @@ function Invoke-CDSurplusAuctionSettle{
         $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
             auto_submit = $true
             partial = $false
-            coin_spends = ($response.bundle.coin_spends)
+            coin_spends = ($response.coin_spends)
         }
         return $spend
     } else {
@@ -1031,6 +1063,24 @@ function Invoke-CDSignCoinSpend{
         Invoke-SageRPC -endpoint sign_coin_spends -json $json
     }
 }
+
+function Start-CDSurplusAuction{
+    $pks = Get-CDSyntheticPKs
+    $json = @{
+        synthetic_pks = $pks
+        fee_per_cost=0
+        only_estimate_fee=$false
+    }
+    Invoke-CDRPC -endpoint '/surplus_auctions/start' -json $json
+}
+
+function Get-CDTreasury{
+    Invoke-CDRPC -endpoint "/treasury" -json @{}
+}
+
+
+
+
 
 # ============================================================
 # Exported functions
