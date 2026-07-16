@@ -8,6 +8,7 @@ A PowerShell module for interacting with [CircuitDao](https://circuitdao.com) th
   - [Table of Contents](#table-of-contents)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [First Run](#first-run)
   - [Quick Start](#quick-start)
   - [Vault Management](#vault-management)
     - [Check Your Vault](#check-your-vault)
@@ -33,7 +34,7 @@ A PowerShell module for interacting with [CircuitDao](https://circuitdao.com) th
 ## Prerequisites
 
 - **PowerShell 7.4+** — [Download](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
-- **Sage Wallet** — [Download](https://github.com/xch-dev/sage/releases) (must be running and logged in)
+- **Sage Wallet** — [Download](https://github.com/xch-dev/sage/releases) (RPC must be enabled)
 - **Required PowerShell Modules:**
   - `PowerSage` — Sage Wallet RPC integration
 
@@ -57,6 +58,31 @@ Import the module:
 Import-Module CircuitSage
 ```
 
+## First Run
+You need to enable sage RPC and Verify PowerShell can reach the RPC.
+
+
+```PowerShell
+# Create a PFX certificate for PowerSage to use
+New-SagePfxCertificate
+
+# Test it out
+Get-SageSyncStatus
+
+selectable_balance          : 40896499622184
+unit                        : @{ticker=XCH; precision=12}
+synced_coins                : 19400
+total_coins                 : 19400
+receive_address             : xch1gjh6ehqk9m0mvyx4knt3j0zx09nllmech2jeq7cv2lsqgzdh2mnqc5zk2t
+burn_address                : xch1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqm6ks6e8mvy
+unhardened_derivation_index : 3500
+hardened_derivation_index   : 0
+checked_files               : 146
+total_files                 : 146
+database_size               : 49897472
+```
+
+If you get output like this, you are ready to use the module.
 
 ---
 
