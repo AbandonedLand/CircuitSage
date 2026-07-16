@@ -69,7 +69,7 @@ RequiredModules = @('PowerSage', 'PwshSpectreConsole')
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-CDMyVault', 'Invoke-CDVaultAction', 'Invoke-CDRPC', 'Get-CDVault', 'Get-CDVaults', 'Get-CDSyntheticPKs', 'Get-CDMySavingsVault','Invoke-CDSurplusAuctionBid', 'Invoke-CDSurplusAuctionSettle', 'Get-CDSurplusAuctions', 'Get-CDMyPuzzleHash', 'Get-CDAddress', 'Get-CDAllVaults', 'Move-CDVaultStabilityFee'
+FunctionsToExport = 'Get-CDMyVault', 'Invoke-CDVaultAction', 'Invoke-CDRPC', 'Get-CDVault', 'Get-CDVaults', 'Get-CDSyntheticPKs', 'Get-CDMySavingsVault','Invoke-CDSurplusAuctionBid', 'Invoke-CDSurplusAuctionSettle', 'Get-CDSurplusAuctions', 'Get-CDMyPuzzleHash', 'Get-CDAddress', 'Get-CDAllVaults', 'Move-CDVaultStabilityFee', 'Submit-CDSurplusAuctionBid', 'Complete-CDSurplusAuction', 'Start-CDSurplusAuction'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
