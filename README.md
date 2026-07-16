@@ -20,8 +20,8 @@ A PowerShell module for interacting with [CircuitDao](https://circuitdao.com) th
     - [Withdraw Collateral](#withdraw-collateral)
   - [Surplus Auctions](#surplus-auctions)
     - [View Active Surplus Auctions](#view-active-surplus-auctions)
-    - [Settle Surplus](#settle-surplus)
     - [Bid on Surplus Auctions](#bid-on-surplus-auctions)
+    - [Settle the auction](#settle-the-auction)
   - [Vault Bidding](#vault-bidding)
   - [Command Reference](#command-reference)
     - [Query Commands](#query-commands)
@@ -36,12 +36,11 @@ A PowerShell module for interacting with [CircuitDao](https://circuitdao.com) th
 - **Sage Wallet** — [Download](https://github.com/xch-dev/sage/releases) (must be running and logged in)
 - **Required PowerShell Modules:**
   - `PowerSage` — Sage Wallet RPC integration
-  - `PwshSpectreConsole` — Terminal UI components
 
 Install the prerequisites:
 
 ```powershell
-Install-Module -Name PowerSage, PwshSpectreConsole -Scope CurrentUser
+Install-Module -Name PowerSage -Scope CurrentUser
 ```
 
 ## Installation
@@ -58,7 +57,6 @@ Import the module:
 Import-Module CircuitSage
 ```
 
-> **Tip:** Add `Import-Module CircuitSage` to your `$PROFILE` to load it automatically each session.
 
 ---
 
@@ -72,7 +70,7 @@ Get-CDMyVault
 Get-CDVaults -status NearingLiquidation
 
 # Deposit 10 XCH into your vault
-Invoke-CDVaultAction -operation deposit -amount (10 | ConvertTo-XchMojo) -submit
+Invoke-CDVaultAction -operation deposit -amount 10000000000000 -submit
 
 # Borrow 500 BYC
 Invoke-CDVaultAction -operation borrow -amount 500000 -submit
@@ -124,9 +122,6 @@ Look up any vault by its identifier (32-byte hex hash):
 # By raw ID
 Get-CDVault -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558c19b33d"
 
-# By piped input from a vault list
-$vaults = Get-CDVaults -status NearingLiquidation
-Get-CDVault -vault $vaults[0].name
 ```
 
 ### Monitor Vault Health
@@ -141,8 +136,6 @@ Get-CDVaults -status InLiquidation
 # Vaults with bad debt
 Get-CDVaults -status BadDebt
 
-# Full protocol state (all vault collections)
-Get-CDVaults -status Any
 ```
 
 ---
@@ -161,10 +154,10 @@ All vault operations accept amounts in **mojo** (the smallest unit of CAT tokens
 Deposit XCH into your vault as collateral:
 
 ```powershell
-# Estimate only (review before committing)
+# Get a spend bundle to sign (but don't sign)
 Invoke-CDVaultAction -operation deposit -amount (65 | ConvertTo-XchMojo)
 
-# Deposit and submit
+# Sign the received spend bundle add (-submit)
 Invoke-CDVaultAction -operation deposit -amount (65 | ConvertTo-XchMojo) -submit
 ```
 
@@ -213,21 +206,28 @@ CircuitDao holds surplus coin auctions where excess collateral can be claimed or
 Get-CDSurplusAuctions
 ```
 
-### Settle Surplus
+### Bid on Surplus Auctions
 
-Settle (claim) a surplus coin from an active auction, converting the auctioned collateral into a claimable asset.
+Submit a bid on a Surplus Auction.  You are bidding CRT tokens for BYC.  The byc_lot_amount is how much you will receive if you win.  The crt_bid_amount is the current bid.
 
 ```
-# First, list active auctions to find the coin identifier
+# First, list active auctions to find the auction name.  This is used as the <auction_coin>
+
 Get-CDSurplusAuctions
+
+name           : a96ff93fa1bd24683f615d34dc2bd7a6f4fcdf6a95d8943956555131f38b5093
+launcher_id    : fcf11f0086036f835d14e3a9665f9664adcc933949737c4a20d75a9fff7eca97
+byc_lot_amount : 50000
+crt_bid_amount : 5250001
+last_bid       : @{bid_expires_at=1784141307; bid_expires_in=607; target_puzzle_hash=b6e21aa79e0efaf647bd6f216f006b4d5a84c1aa39b666d43dc436ae4b4eda1a; timestamp=1784140107}
+expired        : False
+can_be_settled : False
+status         : RUNNING
 ```
 
 ```powershell
-# Settle without submitting (estimate only)
-Invoke-CDSurplusAuctionSettle -auction_coin "<coin_id>"
-
-# Settle and submit to the network
-Invoke-CDSurplusAuctionSettle -auction_coin "<coin_id>" -submit
+# Submit a bid of 7000 byc (7000000 mojos)
+Submit-CDSurplusAuctionBid -auction_coin "<coin_id>" -bid_amount 7000000 -submit
 ```
 
 **Parameters:**
@@ -235,22 +235,36 @@ Invoke-CDSurplusAuctionSettle -auction_coin "<coin_id>" -submit
 | Parameter | Description |
 |---|---|
 | `auction_coin` | The coin identifier of the surplus auction to settle |
+| `bit_amount` | Amount of CRT in Mojos you bid
 | `submit` | Auto-sign and submit the transaction via Sage Wallet |
 
-### Bid on Surplus Auctions
+### Settle the auction
+Once the auction shows <can_be_settled> then it can be completed to send the byc to the winner.
 
 ```powershell
-# Estimate only
-Invoke-CDSurplusAuctionBid -bid_amount 100000 -auction_coin "abc123..."
+# First, list active auctions to find the auction name.  This is used as the <auction_coin>
 
-# Submit bid
-Invoke-CDSurplusAuctionBid -bid_amount 100000 -auction_coin "abc123..." -submit
+Get-CDSurplusAuctions
+
+name           : a96ff93fa1bd24683f615d34dc2bd7a6f4fcdf6a95d8943956555131f38b5093
+launcher_id    : fcf11f0086036f835d14e3a9665f9664adcc933949737c4a20d75a9fff7eca97
+byc_lot_amount : 50000
+crt_bid_amount : 5250001
+last_bid       : @{bid_expires_at=1784141307; bid_expires_in=607; target_puzzle_hash=b6e21aa79e0efaf647bd6f216f006b4d5a84c1aa39b666d43dc436ae4b4eda1a; timestamp=1784140107}
+expired        : True
+can_be_settled : True
+status         : RUNNING
+
+
+Complete-CDSurplusAuction -auction_coin a96ff93fa1bd24683f615d34dc2bd7a6f4fcdf6a95d8943956555131f38b5093 -submit
+
 ```
 
 ---
 
 ## Vault Bidding
-
+> This is untested!
+ 
 Bid on vaults in liquidation auctions:
 
 ```powershell
@@ -295,8 +309,8 @@ New-CDVaultBid -vault "47f2055a01ef8db5c874df595aba262145c8b0134a982911f93fda558
 | `Invoke-CDVaultAction -operation <op> -amount <n> [-submit]` | Deposit, borrow, repay, or withdraw |
 | `New-CDVaultBid -vault <v> -amount <n> -max_bid_price <n> [-info] [-submit]` | Bid on a liquidating vault |
 | `Start-CDVaultAuction -vault <hash>` | Initiate a vault auction |
-| `Invoke-CDSurplusAuctionBid -auction_coin <c> -bid_amount <n> [-submit]` | Bid on a surplus auction coin |
-| `Invoke-CDSurplusAuctionSettle -auction_coin <c> [-submit]` | Settle a surplus auction coin |
+| ` Submit-CDSurplusAuctionBid -auction_coin <c> -bid_amount <n> [-submit]` | Bid on a surplus auction coin |
+| `Complete-CDSurplusAuction -auction_coin <c> [-submit]` | Settle a surplus auction coin |
 
 **Vault operation values:** `deposit`, `borrow`, `repay`, `withdraw`
 
