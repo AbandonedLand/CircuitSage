@@ -18,7 +18,9 @@ function Invoke-CDRPC{
         }
 
         try{
-            Invoke-RestMethod -Method Post -Uri $uri -Body $requestBody -ContentType "application/json" -AllowInsecureRedirect -ErrorAction Stop
+            
+            Invoke-RestMethod -Method Post -Uri $uri -Body $requestBody -ContentType "application/json" -AllowInsecureRedirect -ErrorAction Stop -MaximumRetryCount 3 -RetryIntervalSec 2
+            
         } catch {
             $responseDetails = $_.ErrorDetails.Message
 
@@ -49,7 +51,9 @@ function Get-CDOracle{
     param()
 
     $json = @{}
-    Invoke-CDRPC -endpoint "oracle" -json $json
+    Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint "oracle" -json $json
+    }
 }
 
 function Get-CDProtocolState{
@@ -59,7 +63,9 @@ function Get-CDProtocolState{
     $json = @{
         vaults = $true
     }
-    Invoke-CDRPC -endpoint "protocol/state" -json $json
+    Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Protocol State:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint "protocol/state" -json $json
+    } 
 }
 
 function Get-CDVaults{
@@ -70,7 +76,9 @@ function Get-CDVaults{
         [string]$status
     )
 
-    $vaults = Get-CDProtocolState
+    $vaults = Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Vaults:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint "protocol/state" -json $json
+    }
 
     switch ($status) {
 
@@ -80,6 +88,7 @@ function Get-CDVaults{
         "BadDebt" { return $vaults.vaults_bad_debt}
         "Any" { return $vaults }
     }
+    
 }
 
 function Move-CDVaultStabilityFee{
@@ -87,7 +96,8 @@ function Move-CDVaultStabilityFee{
         [Parameter(Mandatory=$true, Position=0)]
         [string]$vault_name,
         [int32]$fee_per_cost = 0,
-        [switch]$submit
+        [switch]$submit,
+        [switch]$wait
     )
 
     $synthetic_pks = Get-CDSyntheticPKs
@@ -96,12 +106,24 @@ function Move-CDVaultStabilityFee{
         vault_name = $vault_name
         fee_per_cost = $fee_per_cost
     }
-    $response = Invoke-CDRPC -endpoint '/vaults/transfer_stability_fees' -json $json
+    $response = Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Building transaction:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint '/vaults/transfer_stability_fees' -json $json 
+    }
     if($submit.IsPresent){
         $spend = Invoke-SageRPC -endpoint sign_coin_spends -json @{
             auto_submit = $true
             partial = $false
             coin_spends = ($response.bundle.coin_spends)
+        }
+        if($wait.IsPresent){
+            $pending = Get-SagePendingTransactions
+            Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Finalizing transaction" -ScriptBlock {
+                start-sleep 5
+                while($pending.count -gt 0){
+                    $pending = Get-SagePendingTransactions
+                    start-sleep 5
+                }
+            }
         }
         return $spend
     } else {
@@ -111,8 +133,10 @@ function Move-CDVaultStabilityFee{
 }
 
 function Get-CDAllVaults{
-    Invoke-CDRPC -endpoint '/vaults' -json @{}
+    
+    Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting All Vaults:" -ScriptBlock { Invoke-CDRPC -endpoint '/vaults' -json @{} }
 }
+
 function Get-CDVault{
     [CmdletBinding()]
     param(
@@ -120,7 +144,9 @@ function Get-CDVault{
         [string]$vault
     )
     process {
-        Invoke-CDRPC -endpoint "vaults/$vault/" -json @{}
+        Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Vault: $vault" -ScriptBlock { 
+            return Invoke-CDRPC -endpoint "vaults/$vault/" -json @{} 
+        }
     }
 }
 
@@ -260,7 +286,14 @@ function Submit-CDVaultBid{
 function Get-CDSurplusAuctions{
     [CmdletBinding()]
     param()
-    Invoke-CDRPC -endpoint "surplus_auctions" -json @{}
+    $auctions = Invoke-CDRPC -endpoint "surplus_auctions" -json @{}
+    if($auctions.count -lt 1){
+        Write-Host "There are no auctions currently"
+        return $false
+    } else {
+        return $auctions
+    }
+
 }
 
 
@@ -317,7 +350,9 @@ function Submit-CDSurplusAuctionBid{
         }
     }
 
-    $response = Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)/" -json $json
+    $response = Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Creating Bid: $vault" -ScriptBlock { 
+        return Invoke-CDRPC -endpoint "surplus_auctions/$($auction_coin)/" -json $json
+    }
     if($submit.IsPresent){
         $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
             auto_submit = $true
@@ -409,4 +444,4 @@ function Get-CDTreasury{
 }
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Submit-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle
