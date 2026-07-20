@@ -46,6 +46,19 @@ function Invoke-CDRPC{
     }
 }
 
+function Get-CDAnnouncers{
+    [CmdletBinding()]
+    param(
+       
+    )
+
+    $json = @{}
+
+     Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Announcers:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint "announcers" -json $json
+     }
+}
+
 function Get-CDOracle{
     [CmdletBinding()]
     param()
@@ -53,6 +66,21 @@ function Get-CDOracle{
     $json = @{}
     Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
         return Invoke-CDRPC -endpoint "oracle" -json $json
+    }
+}
+
+function Update-CDOracle{
+    [CmdletBinding()]
+    param()
+    $synthetic_pks = Get-CDSyntheticPKs
+    $json = @{
+        synthetic_pks = $synthetic_pks
+        fee_per_cost = 0
+        only_estimate_fee = $false
+        info = $false
+    }
+    Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
+        return Invoke-CDRPC -endpoint 'oracle/upate' -json $json
     }
 }
 
@@ -444,4 +472,4 @@ function Get-CDTreasury{
 }
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle
