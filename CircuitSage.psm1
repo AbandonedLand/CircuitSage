@@ -71,16 +71,17 @@ function Get-CDOracle{
 
 function Update-CDOracle{
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$info
+    )
     $synthetic_pks = Get-CDSyntheticPKs
     $json = @{
         synthetic_pks = $synthetic_pks
         fee_per_cost = 0
-        only_estimate_fee = $false
-        info = $false
+        info = ($info.IsPresent)
     }
     Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
-        return Invoke-CDRPC -endpoint 'oracle/upate' -json $json
+        return Invoke-CDRPC -endpoint 'oracle/update' -json $json
     }
 }
 
