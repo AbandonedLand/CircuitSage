@@ -72,13 +72,13 @@ function Get-CDOracle{
 function Update-CDOracle{
     [CmdletBinding()]
     param(
-        [switch]$info
+        [switch]$info_only
     )
     $synthetic_pks = Get-CDSyntheticPKs
     $json = @{
         synthetic_pks = $synthetic_pks
         fee_per_cost = 0
-        info = ($info.IsPresent)
+        info = ($info_only.IsPresent)
     }
     Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
         return Invoke-CDRPC -endpoint 'oracle/update' -json $json
@@ -143,20 +143,24 @@ function Move-CDVaultStabilityFee{
             coin_spends = ($response.bundle.coin_spends)
         }
         if($wait.IsPresent){
-            $pending = Get-SagePendingTransactions
-            Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Finalizing transaction" -ScriptBlock {
-                start-sleep 5
-                while($pending.count -gt 0){
-                    $pending = Get-SagePendingTransactions
-                    start-sleep 5
-                }
-            }
+            Wait-OnPendingTransaction
         }
         return $spend
     } else {
         return $response
     }
     
+}
+
+function Wait-OnPendingTransaction {
+    $pending = Get-SagePendingTransactions
+    Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Finalizing transaction" -ScriptBlock {
+        start-sleep 5
+        while($pending.count -gt 0){
+            $pending = Get-SagePendingTransactions
+            start-sleep 5
+        }
+    }
 }
 
 function Get-CDAllVaults{
@@ -471,4 +475,5 @@ function Get-CDTreasury{
 }
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle
+
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction
