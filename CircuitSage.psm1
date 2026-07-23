@@ -105,16 +105,14 @@ function Get-CDVaults{
         [string]$status
     )
 
-    $vaults = Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Vaults:" -ScriptBlock {
-        return Invoke-CDRPC -endpoint "protocol/state" -json $json
-    }
+    $vaults = Get-CDAllVaults
 
     switch ($status) {
 
-        "NearingLiquidation" { return $vaults.vaults_nearing_liquidation  }
-        "PendingLiquidation" { return $vaults.vaults_pending_liquidation }
-        "InLiquidation" { return $vaults.vaults_in_liquidation }
-        "BadDebt" { return $vaults.vaults_bad_debt}
+        "NearingLiquidation" { return ($vaults | Where-Object {$_.nearing_liquidation }) }
+        "PendingLiquidation" { return ($vaults | Where-Object {$_.is_liquidatable })  }
+        "InLiquidation" { return ($vaults | Where-Object {$_.is_biddable })  }
+        "BadDebt" { return ($vaults | Where-Object {$_.in_bad_debt }) }
         "Any" { return $vaults }
     }
     
