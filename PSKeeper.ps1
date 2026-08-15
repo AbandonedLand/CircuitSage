@@ -87,10 +87,11 @@ function Start-StabilityFeeBot{
 function Watch-SurplusBid{
      $alert_sent = $false
     while(-not ($alert_sent)){
-    $auction = Get-CDSurplusAuctions
-    if($auction.last_bid.target_puzzle_hash -ne '44afacdc162edfb610d5b4d7193c467967ffef38baa5907b0c57e00409b756e6'){
-        Send-Pushover -Message "outbid"
-    }
+        $auction = Get-CDSurplusAuctions
+        if($auction.last_bid.target_puzzle_hash -ne '44afacdc162edfb610d5b4d7193c467967ffef38baa5907b0c57e00409b756e6'){
+            $alert_sent = $true
+            Send-Pushover -Message "outbid"
+        }
     
     }
 

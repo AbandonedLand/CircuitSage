@@ -364,21 +364,27 @@ function Submit-CDSurplusAuctionBid{
         [int32]$bid_amount,
         [Parameter(Mandatory=$true, Position=1)]
         [string]$auction_coin,
-        [switch]$submit
+        [switch]$submit,
+        [switch]$only_estimate_fee,
+        [int64]$fee_per_cost = 5
     )
 
     $my_hash = Get-CDMyPuzzleHash
     $synthetic_pks = Get-CDSyntheticPKs
 
+
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         operation = "bid"
         args = @{
             amount = $bid_amount
             target_puzzle_hash = $my_hash
             info = $false
         }
+    }
+    if($only_estimate_fee.IsPresent){
+        $json.Add('only_estimate_fee',$true)
     }
 
     $response = Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Creating Bid: $vault" -ScriptBlock { 
@@ -476,4 +482,4 @@ function Get-CDTreasury{
 
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid
