@@ -72,12 +72,13 @@ function Get-CDOracle{
 function Update-CDOracle{
     [CmdletBinding()]
     param(
-        [switch]$info_only
+        [switch]$info_only,
+        [decimal]$fee_per_cost = 0
     )
     $synthetic_pks = Get-CDSyntheticPKs
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         info = ($info_only.IsPresent)
     }
     Invoke-SpectreCommandWithStatus -Spinner Aesthetic -Title "Getting Oracle Info:" -ScriptBlock {
@@ -122,7 +123,7 @@ function Move-CDVaultStabilityFee{
     param(
         [Parameter(Mandatory=$true, Position=0)]
         [string]$vault_name,
-        [int32]$fee_per_cost = 0,
+        [decimal]$fee_per_cost = 0,
         [switch]$submit,
         [switch]$wait
     )
@@ -207,7 +208,8 @@ function Get-CDMyTransactions{
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false, Position=0)]
-        [int32]$start_index=0
+        [int32]$start_index=0,
+        [decimal]$fee_per_cost = 0
     )
     $synthetic_pks = Get-CDSyntheticPKs
 
@@ -215,7 +217,7 @@ function Get-CDMyTransactions{
 
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         only_estimate_fee=$false
     }
 
@@ -230,16 +232,17 @@ function Invoke-CDVaultAction{
         [string]$operation,
         [Parameter(Mandatory=$true, Position=1)]
         [UInt64]$amount,
-        [switch]$submit
+        [switch]$submit,
+        [decimal]$fee_per_cost = 0
     )
-
+    
 
     $synthetic_pks = Get-CDSyntheticPKs
 
 
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         only_estimate_fee = $false
         amount = $amount
     }
@@ -261,7 +264,9 @@ function Start-CDVaultAuction{
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, Position=0, ValueFromPipeline)]
-        [string]$vault
+        [string]$vault,
+        [Int32]$fee_per_cost = 0,
+        [switch]$submit
     )
     process {
         $synthetic_pks = Get-CDSyntheticPKs
@@ -269,13 +274,25 @@ function Start-CDVaultAuction{
 
         $json = @{
             synthetic_pks = $synthetic_pks
-            fee_per_cost = 0
+            fee_per_cost = $fee_per_cost
             only_estimate_fee = $false
             vault_name = $vault
             initiator_puzzle_hash = $initiator_puzzle_hash
         }
 
-        Invoke-CDRPC -endpoint "vaults/start_auction" -json $json
+        $response = Invoke-CDRPC -endpoint "vaults/start_auction" -json $json
+        
+        if($submit.IsPresent){
+            $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
+                auto_submit = $true
+                partial = $false
+                coin_spends = ($response.coin_spends)
+                }
+            return $spend
+            } else {
+                return $response
+            }
+
     }
 }
 
@@ -287,7 +304,10 @@ function Submit-CDVaultBid{
         [Parameter(Mandatory=$true, Position=1)]
         [UInt64]$amount,
         [Parameter(Mandatory=$true, Position=2)]
-        [UInt64]$max_bid_price
+        [UInt64]$max_bid_price,
+        [Int32]$fee_per_cost = 0,
+        [switch]$submit
+
     )
     process {
         $synthetic_pks = Get-CDSyntheticPKs
@@ -295,7 +315,7 @@ function Submit-CDVaultBid{
         if($initiator_puzzle_hash -and $synthetic_pks){
             $json = @{
                 synthetic_pks = $synthetic_pks
-                fee_per_cost = 0
+                fee_per_cost = $fee_per_cost
                 only_estimate_fee = $false
                 vault_name = $vault
                 target_puzzle_hash = $initiator_puzzle_hash
@@ -309,7 +329,17 @@ function Submit-CDVaultBid{
                 $json.info = $true
             }
 
-            Invoke-CDRPC -endpoint "vaults/bid_auction" -json $json
+            $response = Invoke-CDRPC -endpoint "vaults/bid_auction" -json $json
+            if($submit.IsPresent){
+                $spend = invoke-sagerpc -endpoint sign_coin_spends -json @{
+                    auto_submit = $true
+                    partial = $false
+                    coin_spends = ($response.coin_spends)
+                }
+                return $spend
+            } else {
+                return $response
+            }
         }
     }
 }
@@ -333,13 +363,14 @@ function Complete-CDSurplusAuction{
     param(
         [Parameter(Mandatory=$true, Position=0)]
         [string]$auction_coin,
-        [switch]$submit
+        [switch]$submit,
+        [decimal]$fee_per_cost = 0
     )
 
     $synthetic_pks = Get-CDSyntheticPKs
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         operation = "settle"
         args = @{}
     }
@@ -366,7 +397,7 @@ function Submit-CDSurplusAuctionBid{
         [string]$auction_coin,
         [switch]$submit,
         [switch]$only_estimate_fee,
-        [int64]$fee_per_cost = 5
+        [int64]$fee_per_cost = 0
     )
 
     $my_hash = Get-CDMyPuzzleHash
@@ -434,13 +465,15 @@ function Get-CDMyPuzzleHash{
 
 function Get-CDAddress{
     [CmdletBinding()]
-    param()
+    param(
+        [decimal]$fee_per_cost = 0
+    )
 
     $synthetic_pks = Get-CDSyntheticPKs
 
     $json = @{
         synthetic_pks = $synthetic_pks
-        fee_per_cost = 0
+        fee_per_cost = $fee_per_cost
         derivation_index = 0
         include_puzzle_hashes = $true
     }
@@ -467,10 +500,13 @@ function Approve-CDCoinSpend{
 }
 
 function Start-CDSurplusAuction{
+    param(
+        [decimal]$fee_per_cost = 0
+    )
     $pks = Get-CDSyntheticPKs
     $json = @{
         synthetic_pks = $pks
-        fee_per_cost=0
+        fee_per_cost=$fee_per_cost
         only_estimate_fee=$false
     }
     Invoke-CDRPC -endpoint '/surplus_auctions/start' -json $json
@@ -482,4 +518,4 @@ function Get-CDTreasury{
 
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid, Start-CDVaultAuction,  Submit-CDVaultBid
