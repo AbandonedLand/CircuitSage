@@ -516,6 +516,64 @@ function Get-CDTreasury{
     Invoke-CDRPC -endpoint "/treasury" -json @{}
 }
 
+function Get-CDStatutes {
+    Invoke-CDRPC -endpoint '/statutes/info' -json @{}
+}
+
+function Update-CDStatutes {
+    param(
+        [decimal]$fee_per_cost = 0,
+        [switch]$submit
+    )
+    $synthetic_pks = Get-CDSyntheticPKs
+    $json = @{
+            synthetic_pks=$synthetic_pks
+            fee_per_cost=$fee_per_cost
+        }
+    $response = Invoke-CDRPC -endpoint '/statutes/update' -json $json
+    if($submit.IsPresent){
+        $spend = Invoke-SageRPC -endpoint sign_coin_spends -json @{
+            auto_submit = $true
+            partial = $false
+            coin_spends = ($response.coin_spends)
+        }
+        if($wait.IsPresent){
+            Wait-OnPendingTransaction
+        }
+        return $spend
+    } else {
+        return $response
+    }
+
+}
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid, Start-CDVaultAuction,  Submit-CDVaultBid
+function Update-CDStatutesAnnounce {
+    param(
+        [decimal]$fee_per_cost = 0,
+        [switch]$submit
+    )
+    $synthetic_pks = Get-CDSyntheticPKs
+    $json = @{
+            synthetic_pks=$synthetic_pks
+            fee_per_cost=$fee_per_cost
+        }
+    $response = Invoke-CDRPC -endpoint '/statutes/announce' -json $json
+    if($submit.IsPresent){
+        $spend = Invoke-SageRPC -endpoint sign_coin_spends -json @{
+            auto_submit = $true
+            partial = $false
+            coin_spends = ($response.coin_spends)
+        }
+        if($wait.IsPresent){
+            Wait-OnPendingTransaction
+        }
+        return $spend
+    } else {
+        return $response
+    }
+
+}
+
+
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid, Start-CDVaultAuction, Submit-CDVaultBid, Update-CDStatutes, Get-CDStatutes, Update-CDStatutesAnnounce
