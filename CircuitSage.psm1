@@ -501,7 +501,8 @@ function Approve-CDCoinSpend{
 
 function Start-CDSurplusAuction{
     param(
-        [decimal]$fee_per_cost = 0
+        [decimal]$fee_per_cost = 0,
+        [switch]$submit
     )
     $pks = Get-CDSyntheticPKs
     $json = @{
@@ -509,7 +510,12 @@ function Start-CDSurplusAuction{
         fee_per_cost=$fee_per_cost
         only_estimate_fee=$false
     }
-    Invoke-CDRPC -endpoint '/surplus_auctions/start' -json $json
+    $start = Invoke-CDRPC -endpoint '/surplus_auctions/start' -json $json
+    if($submit.IsPresent){
+        Approve-CDCoinSpend -coin_spend ($start.coin_spends)
+    } else {
+        return $start
+    }
 }
 
 function Get-CDTreasury{
@@ -576,4 +582,4 @@ function Update-CDStatutesAnnounce {
 }
 
 
-Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid, Start-CDVaultAuction, Submit-CDVaultBid, Update-CDStatutes, Get-CDStatutes, Update-CDStatutesAnnounce
+Export-ModuleMember -Function Get-CDMyVault, Invoke-CDVaultAction, Invoke-CDRPC, Get-CDVault, Get-CDVaults, Get-CDSyntheticPKs, Get-CDMySavingsVault, Invoke-CDSurplusAuctionBid, Invoke-CDSurplusAuctionSettle, Get-CDSurplusAuctions, Get-CDMyPuzzleHash, Get-CDAddress, Get-CDAllVaults, Move-CDVaultStabilityFee, Get-CDOracle, Get-CDTreasury, Get-CDAnnouncers, Update-CDOracle, Wait-OnPendingTransaction, Submit-CDSurplusAuctionBid, Start-CDVaultAuction, Submit-CDVaultBid, Update-CDStatutes, Get-CDStatutes, Update-CDStatutesAnnounce, Complete-CDSurplusAuction, Start-CDSurplusAuction, Approve-CDCoinSpend
